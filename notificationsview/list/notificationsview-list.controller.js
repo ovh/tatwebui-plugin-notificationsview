@@ -1,0 +1,532 @@
+/*global angular,_,moment */
+
+/**
+ * @ngdoc controller
+ * @name TatUi.controller:MessagesNotificationsViewListCtrl
+ * @requires TatUi.TatEngineMessagesRsc Tat Engine Resource Messages
+ * @requires TatUi.TatEngineMessageRsc  Tat Engine Resource Message
+ * @requires TatUi.TatEngine            Global Tat Engine service
+ *
+ * @description List Messages controller
+ */
+angular.module('TatUi')
+  .controller('MessagesNotificationsViewListCtrl', function(
+    $scope,
+    $rootScope,
+    $stateParams,
+    Authentication,
+    TatEngineMessagesRsc,
+    TatEngineMessageRsc,
+    TatEngineTopicsRsc,
+    TatEngineUserRsc,
+    TatEngine,
+    Flash,
+    $translate,
+    $interval,
+    $location,
+    $localStorage
+  ) {
+    'use strict';
+
+    var self = this;
+    this.topic = $stateParams.topic;
+
+    self.tmpFilter = {};
+    if (!$localStorage.messagesFilters) {
+      $localStorage.messagesFilters = {};
+    }
+    if (!$localStorage.messagesFilters[this.topic]) {
+      $localStorage.messagesFilters[this.topic] = {};
+    }
+
+    this.data = {
+      messages: [],
+      requestFrequency: 5000,
+      count: 100,
+      skip: 0,
+      displayMore: true
+    };
+
+    this.filterPosition = {
+      x: 380,
+      y: 62,
+      visible: false
+    };
+
+    this.filter = {};
+
+    this.getCurrentDate = function() {
+      return moment().format("YYYY/MM/DD-HH:MM");
+    };
+
+    this.currentDate = self.getCurrentDate();
+
+    /**
+     * @ngdoc function
+     * @name loadMore
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Try to load more messages
+     */
+    this.loadMore = function() {
+      if (!self.loading) {
+        self.moreMessage();
+      }
+    };
+
+    this.getBrightness = function(rgb) {
+      var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(rgb);
+      return result ?
+        0.2126 * parseInt(result[1], 16) +
+        0.7152 * parseInt(result[2], 16) +
+        0.0722 * parseInt(result[3], 16) : 0;
+    };
+
+    /**
+     * @ngdoc function
+     * @name deleteMessage
+     * @methodOf TatUi.controller:messagesItem
+     * @description delete a message from a Private topic
+     */
+    this.deleteMessage = function(message) {
+      TatEngineMessageRsc.delete({
+        'idMessage': message._id
+      }).$promise.then(function(resp) {
+        TatEngine.displayReturn(resp);
+        message.hide = true;
+        message.displayed = false;
+      }, function(response) {
+        TatEngine.displayReturn(response);
+      });
+    };
+
+    /**
+     * @ngdoc function
+     * @name mergeMessages
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Merge messages in the current message list
+     * @param {string} messages Message list to merge
+     */
+    this.mergeMessages = function(dest, source) {
+      if (source && _.isArray(source)) {
+        for (var i = 0; i < source.length; i++) {
+          var origin = _.find(dest, {
+            _id: source[i]._id
+          });
+          if (origin) {
+            if (!origin.replies) {
+              origin.replies = [];
+            }
+            self.mergeMessages(origin.replies, source[i].replies);
+            origin.labels = source[i].labels;
+            origin.likers = source[i].likers;
+            origin.nbLikes = source[i].nbLikes;
+            origin.tags = source[i].tags;
+          } else {
+            if (!self.data.intervalTimeStamp) {
+              self.data.intervalTimeStamp = source[i].dateUpdate;
+            } else if (source[i].dateUpdate > self.data.intervalTimeStamp) {
+              self.data.intervalTimeStamp = source[i].dateUpdate;
+            }
+            dest.push(source[i]);
+            dest.sort(function(a, b) {
+              if (a.dateCreation > b.dateCreation) {
+                return -1;
+              }
+              if (a.dateCreation < b.dateCreation) {
+                return 1;
+              }
+              return 0;
+            });
+          }
+        }
+      }
+      return dest;
+    };
+
+    /**
+     * @ngdoc function
+     * @name beginTimer
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Launch the timer to request messages at regular time interval
+     * @param {Integer} timeInterval Milliseconds between calls
+     */
+    this.beginTimer = function(timeInterval) {
+      if ('undefined' === typeof self.data.timer) {
+        self.data.timer = $interval(self.getNewMessages, timeInterval);
+        $scope.$on(
+          "$destroy",
+          function() {
+            self.stopTimer();
+          }
+        );
+      }
+    };
+
+    /**
+     * @ngdoc function
+     * @name stopTimer
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Stop the time that request messages at regular time interval
+     */
+    this.stopTimer = function() {
+      $interval.cancel(self.data.timer);
+      self.data.timer = undefined;
+    };
+
+    /**
+     * @ngdoc function
+     * @name buildFilter
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Build a filter to read messages
+     * @param {object} data Custom data to send to the API
+     * @return {object} Parameters to pass to the API
+     */
+    this.buildFilter = function(data) {
+      return angular.extend({}, data, self.filter);
+    };
+
+    // return value of a tag like 'key:value'
+    this.getTagValue = function(message, key) {
+      for (var i = 0; i < message.tags.length; i++) {
+        if (message.tags[i].indexOf(key) == 0) {
+          return message.tags[i].substring(message.tags[i].indexOf(':') + 1);
+        }
+      }
+      return undefined;
+    }
+
+    this.seeMsg = function(message) {
+      var idMessage = this.getTagValue(message, 'idMessage:');
+      var topic = this.getTagValue(message, 'topic:');
+      this.addLabelRead(message);
+      $rootScope.$broadcast('topic-change', {
+        topic: topic,
+        idMessage: idMessage,
+        reload: true
+      });
+    };
+
+    this.addLabelUnread = function(message) {
+      message.currentLabel = {};
+      message.currentLabel.text = "unread";
+      message.currentLabel.color = "#d04437"; // red
+      self.addLabel(message, function() {
+        self.removeLabel(message, "readed");
+      });
+    };
+
+    this.addLabelRead = function(message) {
+      message.currentLabel = {};
+      message.currentLabel.text = "readed";
+      message.currentLabel.color = "#14892c"; // green
+      self.addLabel(message, function() {
+        self.removeLabel(message, "unread");
+      });
+    };
+
+    /**
+     * @ngdoc function
+     * @name removeLabel
+     * @methodOf TatUi.controller:messagesItem
+     * @description remove a label
+     * @param {object} message Message on which to add a label
+     * @param {object} label   Label {text} to remove
+     */
+    this.removeLabel = function(message, labelText) {
+      if (!message.labels) {
+        return;
+      }
+      if (!self.containsLabel(message, labelText)) {
+        return;
+      }
+      var toRefresh = false;
+      var newList = [];
+      for (var i = 0; i < message.labels.length; i++) {
+        var l = message.labels[i];
+        if (l.text === labelText) {
+          toRefresh = true;
+          TatEngineMessageRsc.update({
+            'action': 'unlabel',
+            'topic': this.topic,
+            'idReference': message._id,
+            'text': l.text
+          }).$promise.then(function(resp) {
+            //nothing here
+          }, function(resp) {
+            TatEngine.displayReturn(resp);
+          });
+        } else {
+          newList.push(l);
+        }
+      }
+
+      if (toRefresh)  {
+        message.labels = newList;
+      }
+    };
+
+    /**
+     * @ngdoc function
+     * @name addLabel
+     * @methodOf TatUi.controller:messagesItem
+     * @description Add a label
+     * @param {object} message Message on which to add a label
+     */
+    this.addLabel = function(message, cb) {
+      if (self.containsLabel(message, message.currentLabel.text)) {
+        return;
+      }
+      TatEngineMessageRsc.update({
+        'action': 'label',
+        'topic': this.topic,
+        'idReference': message._id,
+        'text': message.currentLabel.text,
+        'option': message.currentLabel.color
+      }).$promise.then(function(resp) {
+        if (!message.labels) {
+          message.labels = [];
+        }
+        message.labels.push({
+          text: message.currentLabel.text,
+          color: message.currentLabel.color
+        });
+        message.currentLabel.text = '';
+        if (cb) {
+          cb();
+        }
+      }, function(resp) {
+        TatEngine.displayReturn(resp);
+      });
+    };
+
+    /**
+     * @ngdoc function
+     * @name filterSearch
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Filter messages
+     */
+    this.filterSearch = function() {
+      self.data.skip = 0;
+      self.data.displayMore = true;
+      self.filter.text = self.tmpFilter.filterText ? self.tmpFilter.filterText :
+        null;
+      self.filter.label = self.tmpFilter.filterInLabel ? self.tmpFilter.filterInLabel :
+        null;
+      self.filter.andLabel = self.tmpFilter.filterAndLabel ? self.tmpFilter
+        .filterAndLabel : null;
+      self.filter.notLabel = self.tmpFilter.filterNotLabel ? self.tmpFilter
+        .filterNotLabel : null;
+      self.filter.tag = self.tmpFilter.filterInTag ? self.tmpFilter.filterInTag :
+        null;
+      self.filter.andTag = self.tmpFilter.filterAndTag ? self.tmpFilter.filterAndTag :
+        null;
+      self.filter.notTag = self.tmpFilter.filterNotTag ? self.tmpFilter.filterNotTag :
+        null;
+
+      if (self.tmpFilter.idMessage === "-1") {
+        $rootScope.$broadcast('topic-change', {
+          topic: self.topic,
+          reload: true
+        });
+      } else {
+        self.filter.idMessage = $stateParams.idMessage;
+      }
+
+      self.setFilter('filterInLabel');
+      self.setFilter('filterAndLabel');
+      self.setFilter('filterNotLabel');
+      self.setFilter('filterInTag');
+      self.setFilter('filterAndTag');
+      self.setFilter('filterNotTag');
+
+      this.refresh();
+    };
+
+    this.getTextWithoutMsgId = function(msg)  {
+      // idMessage:5660bd328ce360f93fac1d78 : length=35
+      return msg.text.substring(35)
+    };
+
+    this.setFilter = function(key) {
+      if (self.tmpFilter[key] === "" || self.tmpFilter[key] === undefined) {
+        $location.search(key, null);
+      } else {
+        $location.search(key, self.tmpFilter[key]);
+      }
+      $localStorage.messagesFilters[self.topic][key] = self.tmpFilter[key];
+    };
+
+    /**
+     * @ngdoc function
+     * @name getNewMessages
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Request for new messages
+     */
+    this.getNewMessages = function() {
+      self.loading = true;
+      self.currentDate = self.getCurrentDate();
+      var filter = self.buildFilter({
+        topic: self.topic,
+        dateMinUpdate: self.data.intervalTimeStamp
+      });
+      return TatEngineMessagesRsc.list(filter).$promise.then(function(data) {
+        self.digestInformations(data);
+      }, function(err) {
+        TatEngine.displayReturn(err);
+        self.loading = false;
+      });
+    };
+
+    /**
+     * @ngdoc function
+     * @name moreMessage
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Request more messages
+     * @return {object} Promise
+     */
+    this.moreMessage = function() {
+      self.loading = true;
+      var filter = self.buildFilter({
+        topic: self.topic,
+        limit: self.data.count,
+        skip: self.data.skip
+      });
+      return TatEngineMessagesRsc.list(filter).$promise.then(function(data) {
+        if (!data.messages) {
+          self.data.displayMore = false;
+        } else {
+          self.data.skip = self.data.skip + self.data.count;
+          self.digestInformations(data);
+        }
+      }, function(err) {
+        TatEngine.displayReturn(err);
+        self.loading = false;
+      });
+    };
+
+    /**
+     * @ngdoc function
+     * @name digestInformations
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description
+     * @return
+     */
+    this.digestInformations = function(data) {
+      self.data.isTopicRw = data.isTopicRw;
+      if (_.contains(Authentication.getIdentity().favoritesTopics, '/' +
+          self.topic)) {
+        self.data.isFavoriteTopic = true;
+      }
+      self.data.messages = self.mergeMessages(self.data.messages, data.messages);
+      self.loading = false;
+    };
+
+    /**
+     * @ngdoc function
+     * @name initFiltersFromParam
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description
+     */
+    this.initFiltersFromParam = function() {
+      self.initFilterField("filterInLabel");
+      self.initFilterField("filterAndLabel");
+      self.initFilterField("filterNotLabel");
+      self.initFilterField("filterInTag");
+      self.initFilterField("filterAndTag");
+      self.initFilterField("filterNotTag");
+    };
+
+    /**
+     * @ngdoc function
+     * @name initFilterField
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description
+     */
+    this.initFilterField = function(key) {
+      if ($stateParams[key]) {
+        self.tmpFilter[key] = $stateParams[key];
+      } else if ($localStorage.messagesFilters[self.topic][key]) {
+        self.tmpFilter[key] = $localStorage.messagesFilters[self.topic][key];
+      }
+    };
+
+    /**
+     * @ngdoc function
+     * @name init
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Initialize list messages page. Get list of messages from Tat Engine
+     */
+    this.init = function() {
+      $rootScope.$broadcast('menu-expand', self.topic.split('/'));
+
+      self.initFiltersFromParam();
+      self.filterSearch();
+
+      TatEngineTopicsRsc.list({
+        topic: self.topic
+      }).$promise.then(function(data) {
+        if ((!data.topics) || (!data.topics.length)) {
+          Flash.create('danger', $translate.instant('topics_notopic'));
+          return;
+        }
+        self.data.topic = data.topics[0];
+        self.beginTimer(self.data.requestFrequency);
+      }, function(err) {
+        TatEngine.displayReturn(err);
+      });
+    };
+
+
+    /**
+     * @ngdoc function
+     * @name refresh
+     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
+     * @description Refresh all the messages
+     */
+    this.refresh = function() {
+      $rootScope.$broadcast('loading', true);
+      self.data.currentTimestamp = Math.ceil(new Date().getTime() / 1000);
+      self.data.messages = [];
+      self.moreMessage().then(function() {
+        $rootScope.$broadcast('loading', false);
+      });
+    };
+
+    /**
+     * @ngdoc function
+     * @name isReaded
+     * @methodOf TatUi.controller:messagesItem
+     * @description Return true if message contains a doing label
+     */
+    this.isReaded = function(message) {
+      return self.containsLabel(message, "readed");
+    };
+
+    /**
+     * @ngdoc function
+     * @name isUnread
+     * @methodOf TatUi.controller:messagesItem
+     * @description Return true if message contains a done label
+     */
+    this.isUnread = function(message) {
+      return self.containsLabel(message, "unread");
+    };
+
+    this.containsLabel = function(message, labelText) {
+      if (message.inReplyOfIDRoot) {
+        return false;
+      }
+      var r = false;
+      if (message.labels) {
+        for (var i = 0; i < message.labels.length; i++) {
+          var l = message.labels[i];
+          if (l.text === labelText) {
+            return true;
+          }
+        }
+      }
+      return r;
+    };
+
+    this.init();
+  });

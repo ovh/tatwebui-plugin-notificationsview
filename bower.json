@@ -1,0 +1,23 @@
+{
+  "name": "tatwebui-plugin-notificationsview",
+  "version": "0.0.1",
+  "authors": [
+    "Yvonnick Esnault <yvonnick.esnault@corp.ovh.com>"
+  ],
+  "description": "Notifications View",
+  "tatwebui-plugin": [
+    "notificationsview/list/notificationsview-list.controller.js",
+    "notificationsview/list/notificationsview-list.route.js"
+  ],
+  "moduleType": [
+    "globals"
+  ],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

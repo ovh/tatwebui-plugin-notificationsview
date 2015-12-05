@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<translations>
+  <translation id="messages-nomessage">Aucune notification</translation>
+  <translation id="message_delete">Effacer</translation>
+  <translation id="message_cancel">Annuler</translation>
+  <translation id="message_see">Voir</translation>
+  <translation id="message_mark_as_read">Marquer en lu</translation>
+  <translation id="message_mark_as_unread">Marquer en non lu</translation>
+  <translation id="message_confirm_delete">Confirmer la suppression</translation>
+  <translation id="message_label_add">Ajouter label</translation>
+  <translation id="message_url">Url directe vers ce message</translation>
+</translations>
