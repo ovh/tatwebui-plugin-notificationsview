@@ -4,6 +4,10 @@ This is a plugin for Tat Webui, see https://github.com/ovh/tatwebui
 
 See Tat Engine for more information: https://github.com/ovh/tat
 
+## Screenshot
+
+![Notifications View](https://raw.githubusercontent.com/ovh/tatwebui-plugin-notificationsview/master/screenshot.png)
+
 ## Configuration
 In plugin.tpl.json file, add this line :
 

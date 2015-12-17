@@ -343,17 +343,19 @@ angular.module('TatUi')
     };
 
     this.getTextWithoutMsgId = function(msg)  {
-      // idMessage:5660bd328ce360f93fac1d78 : length=35
-      return msg.text.substring(35)
+      return msg.text.replace(/#mention/, "")
+        .replace(/#idMessage:[\w\d\-@\.\/]*/g, "");
     };
 
     this.setFilter = function(key) {
-      if (self.tmpFilter[key] === "" || self.tmpFilter[key] === undefined) {
+      if (self.tmpFilter[key] === "" ||
+        self.tmpFilter[key] === undefined) {
         $location.search(key, null);
       } else {
         $location.search(key, self.tmpFilter[key]);
       }
-      $localStorage.messagesFilters[self.topic][key] = self.tmpFilter[key];
+      $localStorage.messagesFilters[self.topic][key] =
+        self.tmpFilter[key];
     };
 
     /**
@@ -369,12 +371,13 @@ angular.module('TatUi')
         topic: self.topic,
         dateMinUpdate: self.data.intervalTimeStamp
       });
-      return TatEngineMessagesRsc.list(filter).$promise.then(function(data) {
-        self.digestInformations(data);
-      }, function(err) {
-        TatEngine.displayReturn(err);
-        self.loading = false;
-      });
+      return TatEngineMessagesRsc.list(filter).$promise
+        .then(function(data) {
+          self.digestInformations(data);
+        }, function(err) {
+          TatEngine.displayReturn(err);
+          self.loading = false;
+        });
     };
 
     /**
@@ -391,17 +394,18 @@ angular.module('TatUi')
         limit: self.data.count,
         skip: self.data.skip
       });
-      return TatEngineMessagesRsc.list(filter).$promise.then(function(data) {
-        if (!data.messages) {
-          self.data.displayMore = false;
-        } else {
-          self.data.skip = self.data.skip + self.data.count;
-          self.digestInformations(data);
-        }
-      }, function(err) {
-        TatEngine.displayReturn(err);
-        self.loading = false;
-      });
+      return TatEngineMessagesRsc.list(filter).$promise
+        .then(function(data) {
+          if (!data.messages) {
+            self.data.displayMore = false;
+          } else {
+            self.data.skip = self.data.skip + self.data.count;
+            self.digestInformations(data);
+          }
+        }, function(err) {
+          TatEngine.displayReturn(err);
+          self.loading = false;
+        });
     };
 
     /**
@@ -446,7 +450,8 @@ angular.module('TatUi')
       if ($stateParams[key]) {
         self.tmpFilter[key] = $stateParams[key];
       } else if ($localStorage.messagesFilters[self.topic][key]) {
-        self.tmpFilter[key] = $localStorage.messagesFilters[self.topic][key];
+        self.tmpFilter[key] =
+          $localStorage.messagesFilters[self.topic][key];
       }
     };
 
@@ -466,7 +471,8 @@ angular.module('TatUi')
         topic: self.topic
       }).$promise.then(function(data) {
         if ((!data.topics) || (!data.topics.length)) {
-          Flash.create('danger', $translate.instant('topics_notopic'));
+          Flash.create('danger',
+            $translate.instant('topics_notopic'));
           return;
         }
         self.data.topic = data.topics[0];
@@ -485,7 +491,8 @@ angular.module('TatUi')
      */
     this.refresh = function() {
       $rootScope.$broadcast('loading', true);
-      self.data.currentTimestamp = Math.ceil(new Date().getTime() / 1000);
+      self.data.currentTimestamp =
+        Math.ceil(new Date().getTime() / 1000);
       self.data.messages = [];
       self.moreMessage().then(function() {
         $rootScope.$broadcast('loading', false);
