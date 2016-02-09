@@ -136,7 +136,7 @@
             </div>
           </td>
           <td>
-            <span data-ng-repeat="label in msg.labels track by label.text"
+            <span data-ng-repeat="label in msg.labels track by $index"
                 class="badge tlabel"
                 style="background-color: {{label.color}}; color: {{ctrl.getBrightness(label.color)>128 ? '#000000' : '#ffffff' }}">
               <i class="fa fa-tags"></i> {{label.text}}
