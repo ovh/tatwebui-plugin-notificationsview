@@ -20,24 +20,26 @@ angular.module('TatUi')
     TatEngineTopicsRsc,
     TatEngineUserRsc,
     TatEngine,
+    TatFilter,
     Flash,
     $translate,
     $interval,
-    $location,
-    $localStorage
+    $location
   ) {
     'use strict';
 
     var self = this;
     this.topic = $stateParams.topic;
 
-    self.tmpFilter = {};
-    if (!$localStorage.messagesFilters) {
-      $localStorage.messagesFilters = {};
-    }
-    if (!$localStorage.messagesFilters[this.topic]) {
-      $localStorage.messagesFilters[this.topic] = {};
-    }
+    self.filter = TatFilter.getCurrent();
+    self.filterDialog = { x: 380, y: 62, visible: false };
+
+    $scope.$on('filter-changed', function(ev, filter){
+      self.data.skip = 0;
+      self.data.displayMore = true;
+      self.filter = angular.extend(self.filter, filter);
+      self.refresh();
+    });
 
     this.data = {
       messages: [],
@@ -152,13 +154,9 @@ angular.module('TatUi')
      */
     this.beginTimer = function(timeInterval) {
       if ('undefined' === typeof self.data.timer) {
+        self.getNewMessages(); // Don't wait to execute first call
         self.data.timer = $interval(self.getNewMessages, timeInterval);
-        $scope.$on(
-          "$destroy",
-          function() {
-            self.stopTimer();
-          }
-        );
+        $scope.$on("$destroy",function() { self.stopTimer(); });
       }
     };
 
@@ -211,13 +209,13 @@ angular.module('TatUi')
       message.currentLabel.text = "unread";
       message.currentLabel.color = "#d04437"; // red
       self.addLabel(message, function() {
-        self.removeLabel(message, "readed");
+        self.removeLabel(message, "read");
       });
     };
 
     this.addLabelRead = function(message) {
       message.currentLabel = {};
-      message.currentLabel.text = "readed";
+      message.currentLabel.text = "read";
       message.currentLabel.color = "#14892c"; // green
       self.addLabel(message, function() {
         self.removeLabel(message, "unread");
@@ -347,17 +345,6 @@ angular.module('TatUi')
         .replace(/#idMessage:[\w\d\-@\.\/]*/g, "");
     };
 
-    this.setFilter = function(key) {
-      if (self.tmpFilter[key] === "" ||
-        self.tmpFilter[key] === undefined) {
-        $location.search(key, null);
-      } else {
-        $location.search(key, self.tmpFilter[key]);
-      }
-      $localStorage.messagesFilters[self.topic][key] =
-        self.tmpFilter[key];
-    };
-
     /**
      * @ngdoc function
      * @name getNewMessages
@@ -427,46 +414,12 @@ angular.module('TatUi')
 
     /**
      * @ngdoc function
-     * @name initFiltersFromParam
-     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
-     * @description
-     */
-    this.initFiltersFromParam = function() {
-      self.initFilterField("filterInLabel");
-      self.initFilterField("filterAndLabel");
-      self.initFilterField("filterNotLabel");
-      self.initFilterField("filterInTag");
-      self.initFilterField("filterAndTag");
-      self.initFilterField("filterNotTag");
-    };
-
-    /**
-     * @ngdoc function
-     * @name initFilterField
-     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
-     * @description
-     */
-    this.initFilterField = function(key) {
-      if ($stateParams[key]) {
-        self.tmpFilter[key] = $stateParams[key];
-      } else if ($localStorage.messagesFilters[self.topic][key]) {
-        self.tmpFilter[key] =
-          $localStorage.messagesFilters[self.topic][key];
-      }
-    };
-
-    /**
-     * @ngdoc function
      * @name init
      * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
      * @description Initialize list messages page. Get list of messages from Tat Engine
      */
     this.init = function() {
       $rootScope.$broadcast('menu-expand', self.topic.split('/'));
-
-      self.initFiltersFromParam();
-      self.filterSearch();
-
       TatEngineTopicsRsc.list({
         topic: self.topic
       }).$promise.then(function(data) {
@@ -501,12 +454,12 @@ angular.module('TatUi')
 
     /**
      * @ngdoc function
-     * @name isReaded
+     * @name isRead
      * @methodOf TatUi.controller:messagesItem
      * @description Return true if message contains a doing label
      */
-    this.isReaded = function(message) {
-      return self.containsLabel(message, "readed");
+    this.isRead = function(message) {
+      return self.containsLabel(message, "read");
     };
 
     /**
