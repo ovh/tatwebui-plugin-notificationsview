@@ -5,6 +5,27 @@
     <a class="btn btn-default" ng-click="ctrl.filterDialog.visible=!ctrl.filterDialog.visible" ng-class="{'open': ctrl.filterDialog.visible}">
       <i class="fa fa-filter"></i>
     </a>
+
+
+    <!-- Delete message -->
+    <button
+      title="{{ 'shared_messages_delete' | translate }}"
+      class="btn btn-default"
+      ng-click="messages.deleting=!messages.deleting"
+      ng-class="{'open': messages.deleting}">
+      <i class="fa fa-trash"></i>
+    </button>
+
+    <div class="btn-group" ng-show="messages.deleting">
+      <button class="btn btn-default btn-xs" ng-click="messages.deleting=false">
+        {{ 'shared_common_cancel' | translate }}
+      </button>
+      <button class="btn btn-danger btn-xs" ng-click="ctrl.deleteMessages();messages.deleting=false">
+        {{ 'shared_message_confirm_delete' | translate }}
+        {{ 'shared_messages' | translate }}
+      </button>
+    </div>
+
     <message-filter-bar></message-filter-bar>
     <div movable-dialog title="'Filter'" ng-model="ctrl.filterDialog">
       <message-filter></message-filter>

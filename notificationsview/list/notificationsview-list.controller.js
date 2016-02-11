@@ -18,6 +18,7 @@ angular.module('TatUi')
     TatEngineMessagesRsc,
     TatEngineMessageRsc,
     TatEngineTopicsRsc,
+    TatEngineTopicRsc,
     TatEngineUserRsc,
     TatEngine,
     TatFilter,
@@ -96,6 +97,23 @@ angular.module('TatUi')
         TatEngine.displayReturn(resp);
         message.hide = true;
         message.displayed = false;
+      }, function(response) {
+        TatEngine.displayReturn(response);
+      });
+    };
+
+    /**
+     * @ngdoc function
+     * @name deleteMessages
+     * @methodOf TatUi.controller:messagesItem
+     * @description delete all messages in topic
+     */
+    this.deleteMessages = function() {
+      TatEngineTopicRsc.truncate({
+        'topic': self.topic
+      }).$promise.then(function(resp) {
+        TatEngine.displayReturn(resp);
+        self.refresh();
       }, function(response) {
         TatEngine.displayReturn(response);
       });
@@ -295,49 +313,6 @@ angular.module('TatUi')
       }, function(resp) {
         TatEngine.displayReturn(resp);
       });
-    };
-
-    /**
-     * @ngdoc function
-     * @name filterSearch
-     * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
-     * @description Filter messages
-     */
-    this.filterSearch = function() {
-      self.data.skip = 0;
-      self.data.displayMore = true;
-      self.filter.text = self.tmpFilter.filterText ? self.tmpFilter.filterText :
-        null;
-      self.filter.label = self.tmpFilter.filterInLabel ? self.tmpFilter.filterInLabel :
-        null;
-      self.filter.andLabel = self.tmpFilter.filterAndLabel ? self.tmpFilter
-        .filterAndLabel : null;
-      self.filter.notLabel = self.tmpFilter.filterNotLabel ? self.tmpFilter
-        .filterNotLabel : null;
-      self.filter.tag = self.tmpFilter.filterInTag ? self.tmpFilter.filterInTag :
-        null;
-      self.filter.andTag = self.tmpFilter.filterAndTag ? self.tmpFilter.filterAndTag :
-        null;
-      self.filter.notTag = self.tmpFilter.filterNotTag ? self.tmpFilter.filterNotTag :
-        null;
-
-      if (self.tmpFilter.idMessage === "-1") {
-        $rootScope.$broadcast('topic-change', {
-          topic: self.topic,
-          reload: true
-        });
-      } else {
-        self.filter.idMessage = $stateParams.idMessage;
-      }
-
-      self.setFilter('filterInLabel');
-      self.setFilter('filterAndLabel');
-      self.setFilter('filterNotLabel');
-      self.setFilter('filterInTag');
-      self.setFilter('filterAndTag');
-      self.setFilter('filterNotTag');
-
-      this.refresh();
     };
 
     this.getTextWithoutMsgId = function(msg)  {
