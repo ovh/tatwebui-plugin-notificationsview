@@ -17,7 +17,6 @@ angular.module('TatUi')
     Authentication,
     TatEngineMessagesRsc,
     TatEngineMessageRsc,
-    TatEngineTopicsRsc,
     TatEngineTopicRsc,
     TatEngineUserRsc,
     TatEngine,
@@ -395,15 +394,14 @@ angular.module('TatUi')
      */
     this.init = function() {
       $rootScope.$broadcast('menu-expand', self.topic.split('/'));
-      TatEngineTopicsRsc.list({
-        topic: self.topic
+      TatEngineTopicRsc.oneTopic({
+        action: self.topic
       }).$promise.then(function(data) {
-        if ((!data.topics) || (!data.topics.length)) {
-          Flash.create('danger',
-            $translate.instant('topics_notopic'));
+        if (!data.topic) {
+          Flash.create('danger', $translate.instant('topics_notopic'));
           return;
         }
-        self.data.topic = data.topics[0];
+        self.data.topic = data.topic;
         self.beginTimer(self.data.requestFrequency);
       }, function(err) {
         TatEngine.displayReturn(err);
