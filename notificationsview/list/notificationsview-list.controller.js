@@ -402,7 +402,6 @@ angular.module('TatUi')
           return;
         }
         self.data.topic = data.topic;
-        $rootScope.$broadcast('sidebar-change', {topic:data.topic});
         self.beginTimer(self.data.requestFrequency);
       }, function(err) {
         TatEngine.displayReturn(err);
