@@ -379,7 +379,7 @@ angular.module('TatUi')
      */
     this.digestInformations = function(data) {
       self.data.isTopicRw = data.isTopicRw;
-      if (_.contains(Authentication.getIdentity().favoritesTopics, '/' +
+      if (_.includes(Authentication.getIdentity().favoritesTopics, '/' +
           self.topic)) {
         self.data.isFavoriteTopic = true;
       }
