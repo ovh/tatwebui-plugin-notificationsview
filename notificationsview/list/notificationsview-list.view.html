@@ -1,97 +1,102 @@
-<div class="tat-view tat-notificationsview">
+<div class="page-content">
 
-  <!-- tat-msg-create -->
-  <div class="row">
-    <a class="btn btn-default" ng-click="ctrl.filterDialog.visible=!ctrl.filterDialog.visible" ng-class="{'open': ctrl.filterDialog.visible}">
-      <i class="fa fa-filter"></i>
-    </a>
+  <!-- Header Bar -->
+  <header ng-if="ctrl.data.topic" topic="ctrl.data.topic"></header>
 
+  <div class="tat-view tat-notificationsview">
 
-    <!-- Delete message -->
-    <button
-      title="{{ 'shared_messages_delete' | translate }}"
-      class="btn btn-default"
-      ng-click="messages.deleting=!messages.deleting"
-      ng-class="{'open': messages.deleting}">
-      <i class="fa fa-trash"></i>
-    </button>
+    <!-- tat-msg-create -->
+    <div class="row">
+      <a class="btn btn-default" ng-click="ctrl.filterDialog.visible=!ctrl.filterDialog.visible" ng-class="{'open': ctrl.filterDialog.visible}">
+        <i class="fa fa-filter"></i>
+      </a>
 
-    <div class="btn-group" ng-show="messages.deleting">
-      <button class="btn btn-default btn-xs" ng-click="messages.deleting=false">
-        {{ 'shared_common_cancel' | translate }}
+      <!-- Delete message -->
+      <button
+        title="{{ 'shared_messages_delete' | translate }}"
+        class="btn btn-default"
+        ng-click="messages.deleting=!messages.deleting"
+        ng-class="{'open': messages.deleting}">
+        <i class="fa fa-trash"></i>
       </button>
-      <button class="btn btn-danger btn-xs" ng-click="ctrl.deleteMessages();messages.deleting=false">
-        {{ 'shared_message_confirm_delete' | translate }}
-        {{ 'shared_messages' | translate }}
+
+      <div class="btn-group" ng-show="messages.deleting">
+        <button class="btn btn-default btn-xs" ng-click="messages.deleting=false">
+          {{ 'shared_common_cancel' | translate }}
+        </button>
+        <button class="btn btn-danger btn-xs" ng-click="ctrl.deleteMessages();messages.deleting=false">
+          {{ 'shared_message_confirm_delete' | translate }}
+          {{ 'shared_messages' | translate }}
+        </button>
+      </div>
+
+      <message-filter-bar></message-filter-bar>
+      <div movable-dialog title="'Filter'" ng-model="ctrl.filterDialog">
+        <message-filter topic="ctrl.data.topic"></message-filter>
+      </div>
+    </div>
+    <!-- /tat-msg-create -->
+
+
+    <div class="row">
+      <div class="message-notificationsview-list col-md-12">
+        <table class="table table-striped">
+          <tbody>
+          <tr ng-repeat="msg in ctrl.data.messages" ng-class="msg.displayed ? '': ''" class="message-notificationsview-wrapper" ng-show="!msg.hide">
+            <td>
+              <user-display username="msg.author.username" fullname="msg.author.fullname"></user-display>
+              <div class="message-notificationsview-date" title="creation: {{msg.dateCreation * 1000| amCalendar}}, update: {{msg.dateUpdate * 1000| amCalendar}}">
+                {{msg.dateCreation * 1000| amDateFormat:'DD/MM, HH:mm:ss'}}
+              </div>
+            </td>
+            <td class="message-notificationsview-wrapper">
+              <span ng-bind-html="ctrl.getTextWithoutMsgId(msg) | linky | nl2br | parseTags:msg.tags"></span>
+            </td>
+            <td>
+              <div>
+                  <button class="btn btn-primary" data-ng-click="ctrl.seeMsg(msg)">
+                      <i class="fa fa-eye" title="{{ 'message_see' | translate }}"></i>
+                  </button>
+                  <button class="btn btn-success" data-ng-click="ctrl.addLabelRead(msg)">
+                      <i class="fa fa-check" title="{{ 'message_mark_as_read' | translate }}"></i>
+                  </button>
+                  <button class="btn btn-default" data-ng-click="ctrl.addLabelUnread(msg)">
+                      <i class="fa fa-eye-slash" title="{{ 'message_mark_as_unread' | translate }}"></i>
+                  </button>
+                  <button class="btn btn-default" data-ng-click="msg.deleting=true">
+                      <i class="fa fa-trash" title="{{ 'message_delete' | translate }}"></i>
+                  </button>
+              </div>
+              <div data-ng-show="msg.deleting">
+                  <button class="btn btn-danger" data-ng-click="ctrl.deleteMessage(msg);">
+                      <i class="fa fa-trash"></i>
+                      {{ 'message_confirm_delete' | translate }}
+                  </button>
+                  <button class="btn btn-default" data-ng-click="msg.deleting=false">
+                      <i class="fa fa-ban"></i>
+                      {{ 'message_cancel' | translate }}
+                  </button>
+              </div>
+            </td>
+            <td>
+              <span data-ng-repeat="label in msg.labels track by $index"
+                  class="badge tlabel"
+                  style="background-color: {{label.color}}; color: {{ctrl.getBrightness(label.color)>128 ? '#000000' : '#ffffff' }}">
+                <i class="fa fa-tags"></i> {{label.text}}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="row more">
+      <button ng-disabled="!ctrl.data.displayMore" ng-click="ctrl.loadMore()" class="btn btn-default">
+        <span ng-show="ctrl.data.displayMore"><i class="fa fa-plus-circle"></i></span>
+        {{ 'shared_message_show_more' | translate }}
       </button>
     </div>
 
-    <message-filter-bar></message-filter-bar>
-    <div movable-dialog title="'Filter'" ng-model="ctrl.filterDialog">
-      <message-filter topic="ctrl.data.topic"></message-filter>
-    </div>
   </div>
-  <!-- /tat-msg-create -->
-
-
-  <div class="row">
-    <div class="message-notificationsview-list col-md-12">
-      <table class="table table-striped">
-        <tbody>
-        <tr ng-repeat="msg in ctrl.data.messages" ng-class="msg.displayed ? '': ''" class="message-notificationsview-wrapper" ng-show="!msg.hide">
-          <td>
-            <user-display username="msg.author.username" fullname="msg.author.fullname"></user-display>
-            <div class="message-notificationsview-date" title="creation: {{msg.dateCreation * 1000| amCalendar}}, update: {{msg.dateUpdate * 1000| amCalendar}}">
-              {{msg.dateCreation * 1000| amDateFormat:'DD/MM, HH:mm:ss'}}
-            </div>
-          </td>
-          <td class="message-notificationsview-wrapper">
-            <span ng-bind-html="ctrl.getTextWithoutMsgId(msg) | linky | nl2br | parseTags:msg.tags"></span>
-          </td>
-          <td>
-            <div>
-                <button class="btn btn-primary" data-ng-click="ctrl.seeMsg(msg)">
-                    <i class="fa fa-eye" title="{{ 'message_see' | translate }}"></i>
-                </button>
-                <button class="btn btn-success" data-ng-click="ctrl.addLabelRead(msg)">
-                    <i class="fa fa-check" title="{{ 'message_mark_as_read' | translate }}"></i>
-                </button>
-                <button class="btn btn-default" data-ng-click="ctrl.addLabelUnread(msg)">
-                    <i class="fa fa-eye-slash" title="{{ 'message_mark_as_unread' | translate }}"></i>
-                </button>
-                <button class="btn btn-default" data-ng-click="msg.deleting=true">
-                    <i class="fa fa-trash" title="{{ 'message_delete' | translate }}"></i>
-                </button>
-            </div>
-            <div data-ng-show="msg.deleting">
-                <button class="btn btn-danger" data-ng-click="ctrl.deleteMessage(msg);">
-                    <i class="fa fa-trash"></i>
-                    {{ 'message_confirm_delete' | translate }}
-                </button>
-                <button class="btn btn-default" data-ng-click="msg.deleting=false">
-                    <i class="fa fa-ban"></i>
-                    {{ 'message_cancel' | translate }}
-                </button>
-            </div>
-          </td>
-          <td>
-            <span data-ng-repeat="label in msg.labels track by $index"
-                class="badge tlabel"
-                style="background-color: {{label.color}}; color: {{ctrl.getBrightness(label.color)>128 ? '#000000' : '#ffffff' }}">
-              <i class="fa fa-tags"></i> {{label.text}}
-            </span>
-          </td>
-        </tr>
-      </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="row more">
-    <button ng-disabled="!ctrl.data.displayMore" ng-click="ctrl.loadMore()" class="btn btn-default">
-      <span ng-show="ctrl.data.displayMore"><i class="fa fa-plus-circle"></i></span>
-      {{ 'shared_message_show_more' | translate }}
-    </button>
-  </div>
-
 </div>

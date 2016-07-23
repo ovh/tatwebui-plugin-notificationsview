@@ -21,6 +21,7 @@ angular.module('TatUi')
     TatEngineUserRsc,
     TatEngine,
     TatFilter,
+    TatTopic,
     Flash,
     $translate,
     $interval,
@@ -168,9 +169,10 @@ angular.module('TatUi')
      * @name beginTimer
      * @methodOf TatUi.controller:MessagesNotificationsViewListCtrl
      * @description Launch the timer to request messages at regular time interval
-     * @param {Integer} timeInterval Milliseconds between calls
      */
-    this.beginTimer = function(timeInterval) {
+    this.beginTimer = function() {
+      self.data = angular.extend(self.data, TatTopic.getDataTopic());
+      var timeInterval = self.data.requestFrequency;
       if ('undefined' === typeof self.data.timer) {
         self.getNewMessages(); // Don't wait to execute first call
         self.data.timer = $interval(self.getNewMessages, timeInterval);
@@ -394,18 +396,7 @@ angular.module('TatUi')
      * @description Initialize list messages page. Get list of messages from Tat Engine
      */
     this.init = function() {
-      TatEngineTopicRsc.oneTopic({
-        action: self.topic
-      }).$promise.then(function(data) {
-        if (!data.topic) {
-          Flash.create('danger', $translate.instant('topics_notopic'));
-          return;
-        }
-        self.data.topic = data.topic;
-        self.beginTimer(self.data.requestFrequency);
-      }, function(err) {
-        TatEngine.displayReturn(err);
-      });
+      TatTopic.computeTopic(self.topic, self.beginTimer);
     };
 
 
@@ -416,13 +407,9 @@ angular.module('TatUi')
      * @description Refresh all the messages
      */
     this.refresh = function() {
-      $rootScope.$broadcast('loading', true);
-      self.data.currentTimestamp =
-        Math.ceil(new Date().getTime() / 1000);
+      self.data.currentTimestamp = Math.ceil(new Date().getTime() / 1000);
       self.data.messages = [];
-      self.moreMessage().then(function() {
-        $rootScope.$broadcast('loading', false);
-      });
+      self.moreMessage();
     };
 
     /**
