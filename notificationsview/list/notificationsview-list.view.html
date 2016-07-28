@@ -30,10 +30,7 @@
         </button>
       </div>
 
-      <message-filter-bar></message-filter-bar>
-      <div movable-dialog title="'Filter'" ng-model="ctrl.filterDialog">
-        <message-filter topic="ctrl.data.topic"></message-filter>
-      </div>
+      <message-filter-bar topic="ctrl.data.topic" searching="ctrl.filterDialog.visible"></message-filter-bar>
     </div>
     <!-- /tat-msg-create -->
 
