@@ -331,10 +331,13 @@ angular.module('TatUi')
     this.getNewMessages = function() {
       self.loading = true;
       self.currentDate = self.getCurrentDate();
-      var filter = self.buildFilter({
-        topic: self.topic,
-        dateMinUpdate: self.data.intervalTimeStamp
-      });
+      var filterAttrs = {
+        topic: self.topic
+      };
+      if (!TatFilter.containsDateFilter) {
+        filterAttrs.dateMinUpdate = self.data.intervalTimeStamp;
+      }
+      var filter = self.buildFilter(filterAttrs);
       return TatEngineMessagesRsc.list(filter).$promise
         .then(function(data) {
           self.digestInformations(data);
