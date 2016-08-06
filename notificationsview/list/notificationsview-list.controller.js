@@ -47,7 +47,8 @@ angular.module('TatUi')
       requestFrequency: 5000,
       count: 100,
       skip: 0,
-      displayMore: true
+      displayMore: true,
+      initialLoading: false
     };
 
     this.filterPosition = {
@@ -390,6 +391,7 @@ angular.module('TatUi')
       }
       self.data.messages = self.mergeMessages(self.data.messages, data.messages);
       self.loading = false;
+      self.data.initialLoading = false;
     };
 
     /**
@@ -399,6 +401,7 @@ angular.module('TatUi')
      * @description Initialize list messages page. Get list of messages from Tat Engine
      */
     this.init = function() {
+      self.data.initialLoading = true;
       TatTopic.computeTopic(self.topic, self.beginTimer);
     };
 
