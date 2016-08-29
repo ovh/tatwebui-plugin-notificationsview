@@ -93,7 +93,9 @@ angular.module('TatUi')
      */
     this.deleteMessage = function(message) {
       TatEngineMessageRsc.delete({
-        'idMessage': message._id
+        'idMessageToDelete': message._id,
+        'cascade': 'cascade/',
+        'fromTopic': message.topic
       }).$promise.then(function(resp) {
         TatEngine.displayReturn(resp);
         message.hide = true;
