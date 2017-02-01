@@ -155,6 +155,7 @@ angular.module('TatUi')
           }
         }
       }
+      TatFilter.sortMessages(dest);
       return dest;
     };
 
